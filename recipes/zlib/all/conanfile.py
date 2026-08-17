@@ -20,10 +20,12 @@ class ZlibConan(ConanFile):
     options = {
         "shared": [True, False],
         "fPIC": [True, False],
+        "zlibwapi": [True, False],
     }
     default_options = {
         "shared": False,
         "fPIC": True,
+        "zlibwapi": False,
     }
 
     def export_sources(self):
@@ -32,6 +34,8 @@ class ZlibConan(ConanFile):
     def config_options(self):
         if self.settings.os == "Windows":
             del self.options.fPIC
+        if self.settings.os != "Windows":
+            del self.options.zlibwapi
 
     def configure(self):
         if self.options.shared:
@@ -52,6 +56,7 @@ class ZlibConan(ConanFile):
         tc.cache_variables["ZLIB_BUILD_TESTING"] = False
         tc.cache_variables["ZLIB_BUILD_SHARED"] = self.options.shared
         tc.cache_variables["ZLIB_BUILD_STATIC"] = not self.options.shared
+        tc.cache_variables["ZLIB_BUILD_WINAPI"] = bool(self.options.get_safe("zlibwapi"))
         tc.generate()
 
     def build(self):
@@ -82,3 +87,8 @@ class ZlibConan(ConanFile):
         else:
             libname = "z"
         self.cpp_info.libs = [libname]
+
+        if self.options.get_safe("zlibwapi"):
+            # WINAPI/stdcall variant, installed alongside the default library.
+            self.cpp_info.components["zlibwapi"].libs = ["zlibwapi"]
+            self.cpp_info.components["zlibwapi"].set_property("cmake_target_name", "ZLIB::zlibwapi")
